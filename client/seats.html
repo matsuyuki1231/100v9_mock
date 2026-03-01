@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>座席を探す - train_seat</title>
+    <style>
+        :root {
+            --secondary-color: #1976d2; /* 信頼感のある青色 */
+            --bg-color: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .search-container {
+            max-width: 600px;
+            margin: 0 auto 2rem auto;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            text-align: center;
+            color: var(--secondary-color);
+            margin-top: 0;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 0.8rem;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--secondary-color);
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #1565c0;
+        }
+
+        .results-grid {
+            max-width: 800px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .seat-card {
+            background: white;
+            padding: 1.2rem;
+            border-radius: 10px;
+            border-left: 5px solid var(--secondary-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .seat-card .label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 0.3rem;
+        }
+
+        .seat-card .value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .no-data {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        .loading {
+            text-align: center;
+            grid-column: 1 / -1;
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="search-container">
+    <h2>座席を検索</h2>
+    <div class="search-box">
+        <input type="text" id="train_id_input" placeholder="例: A0001, 山手線" required>
+        <button onclick="searchSeats()">検索</button>
+    </div>
+</div>
+
+<div class="results-grid" id="results">
+    <div class="no-data">列車番号を入力して検索してください。</div>
+</div>
+
+<script>
+    async function searchSeats() {
+        const trainId = document.getElementById('train_id_input').value;
+        const resultsDiv = document.getElementById('results');
+
+        if (!trainId) {
+            alert('列車番号を入力してください');
+            return;
+        }
+
+        resultsDiv.innerHTML = '<div class="loading">検索中...</div>';
+
+        try {
+            // GETパラメータとしてtrain_idを付与
+            const url = `https://notice-ymgs.f5.si/100v9/get.php?train_id=${encodeURIComponent(trainId)}`;
+            const response = await fetch(url);
+
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            const data = await response.json();
+
+            resultsDiv.innerHTML = ''; // クリア
+
+            if (data.length === 0) {
+                resultsDiv.innerHTML = '<div class="no-data">現在、この列車で譲れる座席は登録されていません。</div>';
+                return;
+            }
+
+            data.forEach(seat => {
+                const card = document.createElement('div');
+                card.className = 'seat-card';
+                card.innerHTML = `
+                    <div class="label">号車</div>
+                    <div class="value">${seat.car_number}号車</div>
+                    <div style="margin-top:10px" class="label">座席番号</div>
+                    <div class="value">${seat.seat_number}番</div>
+                `;
+                resultsDiv.appendChild(card);
+            });
+
+        } catch (error) {
+            console.error('Error:', error);
+            resultsDiv.innerHTML = '<div class="no-data" style="color:red;">データの取得に失敗しました。</div>';
+        }
+    }
+</script>
+
+</body>
+</html>
